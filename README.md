@@ -12,7 +12,9 @@ Nesse modulo iremos trabalhar com o ORM EntityFramework, usando .NET5 e o banco 
 
 ## 1. Criando o Banco de Dados
 
-Nessa aplicação assumimos que o banco já exista mas ==não== utilizaremos a abordagem *database first* (engenharia reversa do banco), neste exemplos iremos mapear manualmente os campos e as configurações para atender ao banco.
+Nessa aplicação assumimos que o banco já exista mas ==não== utilizaremos a abordagem *database first* (engenharia reversa do banco), neste exemplos iremos mapear manualmente os campos e as configurações para atender ao banco. Vejamos o modelo de dados: 
+
+![DER](README.assets/DER.png)
 
 O banco denominado `BookDb` utilizado na aplicação tem o seguinte SQL(DDL):
 
