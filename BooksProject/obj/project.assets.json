@@ -1081,11 +1081,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\ellis\\Desktop\\PostgreSQLExample\\BooksProject\\BooksProject.csproj",
+      "projectUniqueName": "C:\\Users\\ellis\\Desktop\\DOTNET5_EntityFramework\\BooksProject\\BooksProject.csproj",
       "projectName": "BooksProject",
-      "projectPath": "C:\\Users\\ellis\\Desktop\\PostgreSQLExample\\BooksProject\\BooksProject.csproj",
+      "projectPath": "C:\\Users\\ellis\\Desktop\\DOTNET5_EntityFramework\\BooksProject\\BooksProject.csproj",
       "packagesPath": "C:\\Users\\ellis\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\ellis\\Desktop\\PostgreSQLExample\\BooksProject\\obj\\",
+      "outputPath": "C:\\Users\\ellis\\Desktop\\DOTNET5_EntityFramework\\BooksProject\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

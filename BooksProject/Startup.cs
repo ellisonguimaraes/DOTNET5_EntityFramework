@@ -1,4 +1,7 @@
 using BooksProject.Models;
+using BooksProject.Models.Context;
+using BooksProject.Repository;
+using BooksProject.Repository.Interface;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +21,6 @@ namespace BooksProject
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             // EntityFramework and PostgreSQL configuration
@@ -31,13 +33,21 @@ namespace BooksProject
             services.AddControllers()
                 .AddNewtonsoftJson(options => options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
 
+            // Swagger Configure
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "BooksProject", Version = "v1" });
             });
+
+            // Dependency Injection (DI)
+            services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
+            services.AddScoped<IRepository<Book>, BookRepository>();
+            services.AddScoped<IRepository<Gender>, GenderRepository>();
+            services.AddScoped<IRepository<Editor>, EditorRepository>();
+            services.AddScoped<IRepository<Identifier>, IdentifierRepository>();
+            services.AddScoped<IRepository<Author>, AuthorRepository>();
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())

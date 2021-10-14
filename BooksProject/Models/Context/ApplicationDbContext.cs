@@ -1,7 +1,7 @@
 using BooksProject.Map;
 using Microsoft.EntityFrameworkCore;
 
-namespace BooksProject.Models
+namespace BooksProject.Models.Context
 {
     public class ApplicationDbContext : DbContext
     {

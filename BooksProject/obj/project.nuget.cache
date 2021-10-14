@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "4GOzmHcwjd4DX0TYs3/oFjPBncF+iElgMK5ib976tziAmZkyHZDmHoVwD36LHMa2p0cGazVH7mW6bQdI1dZEaA==",
+  "dgSpecHash": "+64iklN9kS718F/gHfgfOyuN0Yv07Sh+f654YQTzoD+4uss6cPpLzuSPOCaWv9wTSeZmVaEa1aN0wRG2GqY4wg==",
   "success": true,
-  "projectFilePath": "C:\\Users\\ellis\\Desktop\\PostgreSQLExample\\BooksProject\\BooksProject.csproj",
+  "projectFilePath": "C:\\Users\\ellis\\Desktop\\DOTNET5_EntityFramework\\BooksProject\\BooksProject.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\ellis\\.nuget\\packages\\microsoft.aspnetcore.jsonpatch\\5.0.10\\microsoft.aspnetcore.jsonpatch.5.0.10.nupkg.sha512",
     "C:\\Users\\ellis\\.nuget\\packages\\microsoft.aspnetcore.mvc.newtonsoftjson\\5.0.10\\microsoft.aspnetcore.mvc.newtonsoftjson.5.0.10.nupkg.sha512",
