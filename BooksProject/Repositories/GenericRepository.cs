@@ -2,42 +2,41 @@ using System;
 using System.Linq;
 using BooksProject.Models;
 using BooksProject.Models.Context;
-using BooksProject.Repository.Interface;
 using BooksProject.Models.Pagination;
+using BooksProject.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
 
-namespace BooksProject.Repository
+namespace BooksProject.Repositories
 {
-    public class EditorRepository : IRepository<Editor>
+    public class GenericRepository<TEntity> : IRepository<TEntity> where TEntity : BaseClass
     {
         private readonly ApplicationDbContext _context;
+        private readonly DbSet<TEntity> _dbSet;
 
-        public EditorRepository(ApplicationDbContext context)
+        public GenericRepository(ApplicationDbContext context)
         {
             _context = context;
+            _dbSet = _context.Set<TEntity>();
         }
 
-        public PagedList<Editor> Get(PaginationParameters paginationParameters)
-            => new PagedList<Editor>(_context.Editoras
-                                    .Include(e => e.Books)
-                                    .OrderBy(e => e.Id),
+        public PagedList<TEntity> Get(PaginationParameters paginationParameters) =>
+            new PagedList<TEntity>(_dbSet.OrderBy(i => i.Id), 
                                     paginationParameters.PageNumber,
                                     paginationParameters.PageSize);
 
-        public Editor GetById(int id)
-            => _context.Editoras
-                        .Include(e => e.Books)
-                        .Where(e => e.Id == id)
-                        .SingleOrDefault();
-
-        public Editor Create(Editor item)
+        public TEntity GetById(int id)
+            => _dbSet
+                .Where(i => i.Id == id)
+                .SingleOrDefault();
+        
+        public TEntity Create(TEntity item)
         {
-            try
+            try 
             {
-                _context.Editoras.Add(item);
+                _dbSet.Add(item);
                 _context.SaveChanges();
-            }
-            catch(Exception)
+            } 
+            catch(Exception) 
             {
                 throw;
             }
@@ -45,9 +44,9 @@ namespace BooksProject.Repository
             return item;
         }
 
-        public Editor Update(Editor item)
+        public TEntity Update(TEntity item)
         {
-            var getItem = _context.Editoras.Where(e => e.Id == item.Id).SingleOrDefault();
+            TEntity getItem = _dbSet.Where(i => i.Id == item.Id).SingleOrDefault();
 
             if (getItem != null)
             {
@@ -61,19 +60,19 @@ namespace BooksProject.Repository
                     throw;
                 }
             }
-
+            
             return item;
         }
 
         public bool Delete(int id)
         {
-            var getItem = _context.Editoras.Where(e => e.Id == id).SingleOrDefault();
+            TEntity getItem = _dbSet.Where(i => i.Id == id).SingleOrDefault();
 
             if (getItem != null)
             {
                 try
                 {
-                    _context.Editoras.Remove(getItem);
+                    _dbSet.Remove(getItem);
                     _context.SaveChanges();
                     return true;
                 }
@@ -82,7 +81,7 @@ namespace BooksProject.Repository
                     throw;
                 }
             }
-
+            
             return false;
         }
     }

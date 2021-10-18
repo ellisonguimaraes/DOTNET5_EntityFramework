@@ -1,7 +1,7 @@
 using BooksProject.Models;
 using BooksProject.Models.Pagination;
 
-namespace BooksProject.Repository.Interface
+namespace BooksProject.Repositories.Interface
 {
     public interface IRepository<TEntity> where TEntity : BaseClass
     {

@@ -1,6 +1,6 @@
 namespace BooksProject.Models
 {
-    public class AuthorBook
+    public class AuthorBook : BaseClass
     {
         public int AuthorId { get; set; }
         public virtual Author Author { get; set; }

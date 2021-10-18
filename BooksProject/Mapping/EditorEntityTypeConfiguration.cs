@@ -2,7 +2,7 @@ using BooksProject.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace BooksProject.Map
+namespace BooksProject.Mapping
 {
     public class EditorEntityTypeConfiguration : IEntityTypeConfiguration<Editor>
     {

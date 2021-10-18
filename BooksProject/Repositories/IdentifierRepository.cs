@@ -2,11 +2,11 @@ using System;
 using System.Linq;
 using BooksProject.Models;
 using BooksProject.Models.Context;
-using BooksProject.Repository.Interface;
 using BooksProject.Models.Pagination;
+using BooksProject.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
 
-namespace BooksProject.Repository
+namespace BooksProject.Repositories
 {
     public class IdentifierRepository : IRepository<Identifier>
     {
@@ -20,6 +20,9 @@ namespace BooksProject.Repository
         public PagedList<Identifier> Get(PaginationParameters paginationParameters)
             => new PagedList<Identifier>(_context.Identificadores
                                         .Include(i => i.Book)
+                                        .Include(i => i.Book).ThenInclude(b => b.Editor)
+                                        .Include(i => i.Book).ThenInclude(b => b.Gender)
+                                        .Include(i => i.Book).ThenInclude(b => b.AuthorBooks).ThenInclude(ab => ab.Author)
                                         .OrderBy(i => i.Id),
                                         paginationParameters.PageNumber,
                                         paginationParameters.PageSize);
@@ -27,6 +30,9 @@ namespace BooksProject.Repository
         public Identifier GetById(int id)
             => _context.Identificadores
                 .Include(i => i.Book)
+                .Include(i => i.Book).ThenInclude(b => b.Editor)
+                .Include(i => i.Book).ThenInclude(b => b.Gender)
+                .Include(i => i.Book).ThenInclude(b => b.AuthorBooks).ThenInclude(ab => ab.Author)
                 .Where(i => i.Id == id)
                 .SingleOrDefault();
 

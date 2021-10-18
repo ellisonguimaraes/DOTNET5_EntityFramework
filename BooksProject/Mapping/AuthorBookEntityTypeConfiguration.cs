@@ -2,7 +2,7 @@ using BooksProject.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace BooksProject.Map
+namespace BooksProject.Mapping
 {
     public class AuthorBookEntityTypeConfiguration : IEntityTypeConfiguration<AuthorBook>
     {
@@ -10,6 +10,7 @@ namespace BooksProject.Map
         {
             // Entity Configuration
             builder.ToTable("tbl_autores_livros");
+            builder.Ignore(ab => ab.Id);
             builder.HasKey(ab => new { ab.BookId, ab.AuthorId });
 
             // Property Configuration

@@ -1,7 +1,8 @@
 using System.Text.Json;
-using BooksProject.Models;
-using BooksProject.Repository.Interface;
+using BooksProject.Business.Interface;
+using BooksProject.Models.InputModel;
 using BooksProject.Models.Pagination;
+using BooksProject.Models.ViewModel;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BooksProject.Controllers
@@ -10,18 +11,18 @@ namespace BooksProject.Controllers
     [Route("api/[controller]")]
     public class GenderController : ControllerBase
     {
-        private readonly IRepository<Gender> _repository;
+        private readonly IBusiness<GenderViewModel, GenderInputModel> _genderBusiness;
 
-        public GenderController(IRepository<Gender> repository)
+        public GenderController(IBusiness<GenderViewModel, GenderInputModel> genderBusiness)
         {
-            _repository = repository;
+            _genderBusiness = genderBusiness;
         }
 
         [HttpGet]
         [Route("{PageNumber}/{PageSize}")]
         public IActionResult Get([FromRoute] PaginationParameters paginationParameters)
         {
-            var genders = _repository.Get(paginationParameters);
+            var genders = _genderBusiness.GetPaginate(paginationParameters);
 
             var metadata = new {
                 genders.TotalCount,
@@ -41,11 +42,33 @@ namespace BooksProject.Controllers
         [Route("{id}")]
         public IActionResult Get(int id)
         {
-            var gender = _repository.GetById(id);
+            var gender = _genderBusiness.GetById(id);
 
             if (gender == null) return BadRequest();
 
             return Ok(gender);
+        }
+
+        [HttpPost]
+        public IActionResult Post([FromBody] GenderInputModel genderInputModel)
+        {
+            var result = _genderBusiness.Create(genderInputModel);
+            return Ok(result);
+        }
+
+        [HttpPut]
+        public IActionResult Update([FromBody] GenderInputModel genderInputModel)
+        {
+            var result = _genderBusiness.Update(genderInputModel);
+            return Ok(result);
+        }
+
+        [HttpDelete]
+        [Route("{id}")]
+        public IActionResult Delete(int id)
+        {
+            if (!_genderBusiness.Delete(id)) return BadRequest("Id não existe!");
+            return NoContent();
         }
     }
 }

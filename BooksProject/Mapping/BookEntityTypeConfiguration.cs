@@ -2,7 +2,7 @@ using BooksProject.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace BooksProject.Map
+namespace BooksProject.Mapping
 {
     public class BookEntityTypeConfiguration : IEntityTypeConfiguration<Book>
     {
@@ -31,6 +31,11 @@ namespace BooksProject.Map
             builder.HasOne<Gender>(b => b.Gender)
                 .WithMany(g => g.Books)
                 .HasForeignKey(b => b.GenderId);
+
+            builder.HasOne<Identifier>(b => b.Identifier)
+                .WithOne(i => i.Book)
+                .HasForeignKey<Book>(b => b.IdentifierId)
+                .OnDelete(DeleteBehavior.ClientCascade);
         }
     }
 }

@@ -840,5 +840,545 @@ builder.HasOne<Author>(ab => ab.Author)
 
 
 
-## 5. Realizando Consultas
+## 5. Construção dos métodos CRUD: Persistindo, realizando consultas, atualizando e removendo dados.
 
+O CRUD das tabelas são realizadas encima dos `DbSet` presentes no `ApplicationDbContext`, e são realizadas usando o **LINQ** do C#, seja através de *Query Syntax* ou *Method Syntax*. Neste projeto iremos utilizar o *Method Syntax*. 
+
+Para melhor organização da arquitetura, iremos utilizar o Padrão Repositório (*Repository Pattern*). As classes de repositório serão utilizadas para fazer acesso ao banco, ou seja, ao `DbContext`. A pasta referente ao padrão conterá: 
+
+- Uma pasta denominada **Interface** onde terá todas as interfaces dos respectivos repositórios, que nesse caso usamos somente o `IRepository`, que é uma interface genérica; 
+- Classe de repositório genérica `GenericRepository`;
+- Classes de repositório referente a cada uma das entidades. Elas em geral seguem o mesmo padrão. São elas:
+    - `AuthorRepository`
+    - `BookRepository`
+    - `EditorRepository`
+    - `GenderRepository`
+    - `IdentifierRepository`
+
+> **Aviso!**
+>
+> Neste projeto utilizamos paginação de dados ao invés de retornar todos os dados de uma tabela no banco. Para isso utilizamos a paginação feita em [https://github.com/ellisonguimaraes/](https://github.com/ellisonguimaraes/DOTNET5_PaginationData). Além disso também utilizamos o Padrão Repositório (*Repository Pattern*) que pode ser encontrado em: [https://github.com/ellisonguimaraes/DOTNET5_FluentValidation_RepositoryPattern_Mysql](https://github.com/ellisonguimaraes/DOTNET5_FluentValidation_RepositoryPattern_Mysql).
+>
+> Observe que nas classes de repositório não retornamos todos os dados no `Get` e sim de forma paginada `PagedList`. Para inserir a paginação criamos uma pasta `Models/Pagination` com duas classes:
+>
+> - `PagedList` que é a extensão de um `List` para suportar dados paginados:
+>
+>     ```C#
+>     using System;
+>     using System.Collections.Generic;
+>     using System.Linq;
+>     
+>     namespace BooksProject.Models.Pagination
+>     {
+>         public class PagedList<T> : List<T>
+>         {
+>             public int CurrentPage { get; set; }
+>             public int TotalPages { get; set; }
+>             public int PageSize { get; set; }
+>             public int TotalCount { get; set; }
+>             public bool HasPrevious => CurrentPage > 1;
+>             public bool HasNext => CurrentPage < TotalPages;        
+>                   
+>             public PagedList(IQueryable<T> source, 
+>                              int pageNumber, int pageSize)
+>             {
+>                 TotalCount = source.Count();
+>                 PageSize = pageSize;
+>                 CurrentPage = pageNumber;
+>                 TotalPages = (int)Math.Ceiling(TotalCount / (double)PageSize);
+>     
+>                 var items = source
+>                     .Skip((this.CurrentPage - 1) * this.PageSize)
+>                     .Take(this.PageSize)
+>                     .ToList();
+>     
+>                 this.AddRange(items);
+>             }
+>         }
+>     }
+>     ```
+>
+> - A classe `PaginationParameters` que é o DTO contendo `PageNumber` (página requerida) e `PageSize` (quantidade de itens por página) recebido pelo *client*:
+>
+>     ```C#
+>     namespace BooksProject.Models.Pagination
+>     {
+>         public class PaginationParameters
+>         {
+>             const int MAX_PAGE_SIZE = 50;
+>             private int _pageSize = 10;
+>     
+>             public int PageNumber { get; set; } = 1;
+>             public int PageSize {
+>                 get => _pageSize;
+>                 set => _pageSize = value > MAX_PAGE_SIZE ? MAX_PAGE_SIZE : value;
+>             }
+>     
+>             public PaginationParameters() { }
+>             
+>             public PaginationParameters(int pageNumber, int pageSize)
+>             {
+>                 PageNumber = pageNumber;
+>                 PageSize = pageSize;
+>             }
+>         }
+>     }
+>     ```
+
+
+
+### 5.1. Construção do Padrão Repositório (*Repository Pattern*)
+
+#### Interface do Repositório
+
+Usamos somente uma interface para os repositórios, a `IRepository`:
+
+```C#
+using BooksProject.Models;
+using BooksProject.Models.Pagination;
+
+namespace BooksProject.Repositories.Interface
+{
+    public interface IRepository<TEntity> where TEntity : BaseClass
+    {
+        PagedList<TEntity> Get(PaginationParameters paginationParameters);
+        TEntity GetById(int id);
+        TEntity Create(TEntity item);
+        TEntity Update(TEntity item);
+        bool Delete(int id);
+    }
+}
+```
+
+Ela contém os principais métodos CRUD do banco de dados. É possível observar também o objeto retornado na assinatura do método `Get`, que é do tipo `PagedList` (tipo criado para paginação), e também o objeto recebido via parâmetro que também se trata dos parâmetros de paginação.
+
+
+
+#### Repositório Genérico
+
+O repositório genérico `GenericRepository` foi criado e pode ser utilizado para consultas simples de uma única tabela (sem *join*):
+
+```C#
+using System;
+using System.Linq;
+using BooksProject.Models;
+using BooksProject.Models.Context;
+using BooksProject.Models.Pagination;
+using BooksProject.Repositories.Interface;
+using Microsoft.EntityFrameworkCore;
+
+namespace BooksProject.Repositories {
+    
+    public class GenericRepository<TEntity> : IRepository<TEntity> where TEntity : BaseClass
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly DbSet<TEntity> _dbSet;
+
+        public GenericRepository(ApplicationDbContext context) {
+            _context = context;
+            _dbSet = _context.Set<TEntity>();
+        }
+
+        public PagedList<TEntity> Get(PaginationParameters paginationParameters) =>
+            new PagedList<TEntity>(_dbSet.OrderBy(i => i.Id), 
+                                    paginationParameters.PageNumber,
+                                    paginationParameters.PageSize);
+
+        public TEntity GetById(int id)
+            => _dbSet
+                .Where(i => i.Id == id)
+                .SingleOrDefault();
+        
+        public TEntity Create(TEntity item) {
+            try {
+                _dbSet.Add(item);
+                _context.SaveChanges();
+                
+            } catch(Exception) {
+                throw;
+            }
+
+            return item;
+        }
+
+        public TEntity Update(TEntity item) {
+            TEntity getItem = _dbSet.Where(i => i.Id == item.Id).SingleOrDefault();
+
+            if (getItem != null) {
+                try {
+                    _context.Entry(getItem).CurrentValues.SetValues(item);
+                    _context.SaveChanges();
+                    
+                } catch(Exception) {
+                    throw;
+                }
+            }
+            
+            return item;
+        }
+
+        public bool Delete(int id) {
+            TEntity getItem = _dbSet.Where(i => i.Id == id).SingleOrDefault();
+
+            if (getItem != null) {
+                try {
+                    _dbSet.Remove(getItem);
+                    _context.SaveChanges();
+                    return true;
+                    
+                } catch(Exception) {
+                    throw;
+                }
+            }
+            
+            return false;
+        }
+    }
+}
+```
+
+Podemos fazer algumas observações:
+
+- Essa classe implementa a interface `IRepository` e é do tipo genérica `TEntity` onde é definido a regra `where` no qual indica que `TEntity` será somente classes que herdam de `BaseClass`;
+- Recebe em seu construtor o `ApplicationDbContext`, armazena ao atributo local `_context` e já obtém o `DbSet` referente ao tipo `TEntity` e armazena ao atributo local `_dbSet`;
+- O restante dos métodos falaremos em tópicos abaixo.
+
+
+
+#### Repositórios Específicos
+
+Quando se trata de tabelas com relacionamentos, precisamos incluir (`Include`) alguns dados específicos na *query*, e por este motivo criamos repositórios específicos para cada um. Todos esses repositórios específicos tem a mesma estrutura, e para demonstração, iremos utilizar o maior deles, o `BookRepository`:
+
+```C#
+using System;
+using System.Linq;
+using BooksProject.Models;
+using BooksProject.Models.Context;
+using BooksProject.Models.Pagination;
+using BooksProject.Repositories.Interface;
+using Microsoft.EntityFrameworkCore;
+
+namespace BooksProject.Repositories
+{
+    public class BookRepository : IRepository<Book> 
+    {
+        private readonly ApplicationDbContext _context;
+
+        public BookRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+        
+        public PagedList<Book> Get(PaginationParameters paginationParameters)
+            => new PagedList<Book>(_context.Livros
+                                   .Include(b => b.Editor)
+                                   .Include(b => b.Gender)
+                                   .Include(b => b.Identifier)
+                                   .Include(b => b.AuthorBooks)
+                                   .OrderBy(b => b.Id)
+                                   .Select(b => new Book(){
+                                       Id = b.Id,
+                                       Name = b.Name,
+                                       Price = b.Price,
+                                       PubDate = b.PubDate,
+                                       EditorId = b.EditorId,
+                                       GenderId = b.GenderId,
+                                       IdentifierId = b.IdentifierId,
+                                       Editor = b.Editor,
+                                       Gender = b.Gender,
+                                       Identifier = b.Identifier,
+                                       AuthorBooks = b.AuthorBooks
+                                          	.Select(ab => new AuthorBook{
+                                           		Author = ab.Author,
+                                           		AuthorId = ab.AuthorId
+                                       }).ToList()
+                                   }),
+                                   paginationParameters.PageNumber,
+                                   paginationParameters.PageSize);
+
+        public Book GetById(int id)
+            => _context.Livros
+                .Include(b => b.Editor)
+                .Include(b => b.Gender)
+                .Include(b => b.Identifier)
+                .Include(b => b.AuthorBooks).ThenInclude(ab => ab.Author)
+                .Where(b => b.Id == id)
+                .SingleOrDefault();
+
+        public Book Create(Book item) {
+            try {
+                _context.Livros.Add(item);
+                _context.SaveChanges();
+                
+            } catch(Exception) {
+                throw;
+            }
+
+            return item;
+        }
+
+        public Book Update(Book item) {
+            var getItem = _context.Livros
+                				.Where(b => b.Id == item.Id).SingleOrDefault();
+
+            if (getItem != null) {
+                try {
+                    _context.Entry(getItem).CurrentValues.SetValues(item);
+                    _context.SaveChanges();
+                    
+                } catch(Exception) {
+                    throw;
+                }
+            }
+
+            return item;
+        }
+        
+        public bool Delete(int id) {
+            var getItem = _context.Livros
+                				.Where(b => b.Id == id).SingleOrDefault();
+
+            if (getItem != null) {
+                try {
+                    _context.Livros.Remove(getItem);
+                    _context.SaveChanges();
+                    return true;
+                    
+                } catch(Exception) {
+                    throw;
+                }
+            }
+
+            return false;
+        }
+    }
+}
+```
+
+Podemos observar através desse código:
+
+- Diferentemente do `GenericRepository`, não há a necessidade de ter uma instância própria do `DbSet`;
+- As consultas são realizadas pelos métodos `Get` e `GetById`;
+- Os métodos:
+    - `Create` é utilizado para **inserir** dados ao banco;
+    - `Update` é utilizado para **atualizar** um dado no banco;
+    - `Delete` é utilizado para **excluir** um dado no banco.
+
+
+
+### 5.2. Entendendo as consultas (Read)
+
+As consultas são realizadas através dos métodos `Get` e `GetById` dos repositórios e trata-se de consultas **LINQ**. De forma geral as consultas são realizadas através do **LINQ** presente no C#, porém, há algumas extensões do **LINQ** no pacote do *EntityFramework* usadas especificamente para as consultas a banco. 
+
+Algumas operações do LINQ são:
+
+- **Filtering**: `Where`, `OfType`;
+- **Sorting**: `OrderBy`, `OrderByDescending`, `ThenBy`, `ThenByDescending`, `Reverse`;
+- **Set**: `Distinct`, `Except`, `Intersect`, `Union`;
+- **Quantification**: `All`, `Any`, `Contains`;
+- **Projection**: `Select`, `SelectMany`;
+- **Partition**: `Skip`, `Take`;
+- **Join**: `Join`, `GroupJoin`;
+- **Grouping**: `GroupBy`;
+- **Generational**: `Empty`;
+- **Equality**: `SequenceEquals`;
+- **Element**: `ElementAt`, `First`, `FirstOrDefault`, `Last`, `LastOrDefault`, `Single`, `SingleOrDefault`;
+- **Conversions**: `AsEnumerable`, `AsQueryable`;
+- **Concatenation**: `Concat`;
+- **Aggregation**: `Aggregate, Average, Count, LongCount, Max, Min, Sum`;
+
+Algumas operações do LINQ estendida pelo pacote *EntityFramework* são:
+
+- **Include**: `Include(x => x.Attribute)`. Essa operação é utilizada para incluir dados de outra tabela na qual tem relacionamento.
+
+    A tabela `Book` contém referência para `Editor`, `Gender`, `Identifier` e `AuthorBook`, com isso, é possível observar no tópico 5.3 que o repositório `BookRepository` contém o método `Include` incluindo os dados de cada um dos objetos que tem relação. Se o `Include` não for colocado, a tabela é retornada sem os dados dos seus relacionamentos.
+
+- **ThenInclude**: `ThenInclude(x => x.Attribute)`. Essa operação é utilizada em conjunto com a anterior para incluir outras tabelas a partir da segunda. Ela é comumente utilizada para consultas no relacionamento *many-to-many*
+
+
+
+#### Usando `Include` e `ThenInclude` nas consultas: relacionamento *Many-to-Many*
+
+O relacionamento *Many-to-Many* tem algumas particularidades quanto a sua consulta. Observe por exemplo no relacionamento entre `Book` e `Author`, onde temos `AuthorBook` como sua tabela intermediária.
+
+Na classe de repositório, quando utilizamos `.Include(b => b.AuthorBooks)` nas consultas somente é retornado os dados/atributos de `AuthorBooks`, porém, o que nos interessa é o `Author` contido nela, que nesse caso, não aparecerá os dados. 
+
+Para que esses dados possam aparecer, é possível com as seguintes opções:
+
+- Utilizando `Select`: para exemplificar, iremos utilizar o método `Get` paginado de `BookRepository`:
+
+    ```C#
+    public PagedList<Book> Get(PaginationParameters paginationParameters)
+    	=> new PagedList<Book>(_context.Livros
+                        .Include(b => b.Editor)
+                        .Include(b => b.Gender)
+                        .Include(b => b.Identifier)
+                        .Include(b => b.AuthorBooks)
+                        .OrderBy(b => b.Id)
+                        .Select(b => new Book(){
+                            Id = b.Id,
+                            Name = b.Name,
+                            Price = b.Price,
+                            PubDate = b.PubDate,
+                            EditorId = b.EditorId,
+                            GenderId = b.GenderId,
+                            IdentifierId = b.IdentifierId,
+                            Editor = b.Editor,
+                            Gender = b.Gender,
+                            Identifier = b.Identifier,
+                            AuthorBooks = b.AuthorBooks.Select(ab => new AuthorBook{
+                                Author = ab.Author,
+                                AuthorId = ab.AuthorId
+                            }).ToList()
+                        }),
+    		paginationParameters.PageNumber,
+    		paginationParameters.PageSize);
+    ```
+
+    -  É utilizado o `.Select`, onde para cada objeto `b` retornamos um novo `Book` (`new Book()`) atribuindo os valores de `b` ao novo objeto.
+    - Ao chegar na atribuição de `AuthorBooks` (objeto com relação *many-to-many*) fazemos um novo `Select`, onde para cada `ab` de `AuthorBooks`, retornamos um novo objeto `AuthorBook` atribuindo os dados de `ab` para esse novo objeto.
+    - Esse *looping* acontece até que esteja na tabela de interesse. Podemos ver exemplos disso nos métodos `Get` paginado de `Book` e `Author`.
+
+- Utilizando `Include` e `ThenInclude`: para exemplificar, iremos utilizar o método `GetById` de `AuthorRepository`:
+
+    ```C#
+    public Author GetById(int id)
+        => _context.Autores
+        .Include(a => a.AuthorBooks).ThenInclude(ab => ab.Book)
+        .Include(a => a.AuthorBooks).ThenInclude(ab => ab.Book.Editor)
+        .Include(a => a.AuthorBooks).ThenInclude(ab => ab.Book.Gender)
+        .Include(a => a.AuthorBooks).ThenInclude(ab => ab.Book.Identifier)
+        .Where(a => a.Id == id)
+        .SingleOrDefault();
+    ```
+
+    - Através da tabela `Author` precisamos acessar `Book` do atributo `AuthorBooks`, para isso, usamos o `Include` para `AuthorBooks` e em seguida usamos o `ThenInclude` para a partir de `AuthorBooks` incluir `Book`.
+    - Porém, sabemos que `Book` tem outros relacionamentos ao qual desejamos incluir também. Para que isso seja feito, é preciso inserir quantos `Include` forem necessários com o `ThenInclude` acessando cada um desses relacionamentos. 
+    - Veja por exemplo na linha 4 do código acima que ele inclui `ab.Book.Editor`, e assim por diante. 
+
+Incluindo uma tabela via `Include` e `ThenInclude` é realmente muito mais fácil, porém, a utilização do `Select` pode ser uma boa escolha quando desejamos fazer a projeção dos dados/obter somente o necessário. 
+
+> É possível ler mais sobre o uso na documentação oficial: [https://docs.microsoft.com/pt-br/ef/core/querying/related-data/eager](https://docs.microsoft.com/pt-br/ef/core/querying/related-data/eager)
+
+
+
+### 5.3. Create, Update e Delete
+
+Falaremos nesse tópico sobre cada um dos métodos de Create, Update e Delete.
+
+> Os métodos `create`, `update` e `delete` seguem o padrão estabelecido no projeto sobre *Fluent Validation* e *Repository Pattern* no **GitHub**: [https://github.com/ellisonguimaraes/DOTNET5_FluentValidation_RepositoryPattern_Mysql](https://github.com/ellisonguimaraes/DOTNET5_FluentValidation_RepositoryPattern_Mysql)
+
+
+
+#### Create
+
+O método `Create` tem a seguinte forma:
+
+```C#
+public Book Create(Book item) {
+    try {
+        _context.Livros.Add(item);
+        _context.SaveChanges();
+
+    } catch(Exception) {
+        throw;
+    }
+
+    return item;
+}
+```
+
+O método recebe um objeto entidade `Book` via parâmetro. Entre blocos `try~catch` usamos o contexto `_context`, acessando a tabela referente a `Book` (`DbSet Livros`) e adicionamos o item recebido via parâmetro.
+
+Logo após adicionarmos precisamos salvar as mudanças no banco com o comando `.SaveChanges()`. Se nenhum problema ocorrer, o programa retornará esse item recebido.
+
+> Automaticamente ao salvarmos no banco de dados, o objeto `item` já será referenciado ao objeto do banco e retornará com um `id`.
+
+
+
+#### Update
+
+O método `Update` tem a seguinte forma:
+
+```C#
+public Book Update(Book item) {
+    var getItem = _context.Livros.Where(b => b.Id == item.Id).SingleOrDefault();
+
+    if (getItem != null) {
+        try {
+            _context.Entry(getItem).CurrentValues.SetValues(item);
+            _context.SaveChanges();
+
+        } catch(Exception) {
+            throw;
+        }
+    }
+
+    return item;
+}
+```
+
+Antes de atualizar, precisamos saber se esse item realmente existe no banco de dados, e para isso precisamos acessar o banco (linha 2) buscando através do `id` do item recebido.
+
+Antes de fazer a atualização é necessário verificar se a consulta ao banco retornou realmente um dado (linha 4), verificando se `getItem` não é nulo. 
+
+Se `getItem` não for nulo, através de um bloco `try~catch` fazemos as alterações. Usamos na linha 6 o comando `_context.Entry(getItem).CurrentValues.SetValues(item);` informando qual o item da tabela precisamos alterar (`getItem`) e iremos trocar os valores dele pelos valores de `item`. Finalmente precisamos salvar as mudanças.
+
+Se tudo ocorrer bem, assim como no `Create`, `item` já retornará com as alterações feita na linha 6. 
+
+
+
+#### Delete
+
+O método `Delete` tem a seguinte forma:
+
+```C#
+public bool Delete(int id) {
+    var getItem = _context.Livros.Where(b => b.Id == id).SingleOrDefault();
+
+    if (getItem != null) {
+        try {
+            _context.Livros.Remove(getItem);
+            _context.SaveChanges();
+            return true;
+
+        } catch(Exception) {
+            throw;
+        }
+    }
+
+    return false;
+}
+```
+
+O método de `Delete` é semelhante ao método `Update`, seguindo o mesmo princípio de verificar pelo `id` se o dado existe no banco. É feita uma validação se o dado retornado é diferente de nulo e através do bloco `try~catch` fazemos a remoção com o comando `_context.Livros.Remove(getItem)` e salvamos as alterações no banco com `.SaveChanges()`.
+
+A diferença desse método está no retorno, que quando ocorre com sucesso é retornado um `true`, se não um `false`. 
+
+
+
+### 5.4. Injeção de Dependências (DI) referente aos repositórios
+
+O projeto necessita das seguintes Injeções de Dependências (DI) configuradas ao método `ConfigureServices` da classe `Startup` para que os repositórios sejam acessados no programa:
+
+```C#
+// Dependency Injection (DI)
+services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
+services.AddScoped<IRepository<Book>, BookRepository>();
+services.AddScoped<IRepository<Gender>, GenderRepository>();
+services.AddScoped<IRepository<Editor>, EditorRepository>();
+services.AddScoped<IRepository<Identifier>, IdentifierRepository>();
+services.AddScoped<IRepository<Author>, AuthorRepository>();
+```
+
+
+
+
+
+Separar curso (titulação atual)
+
+Ocupação Atual e Histórico
+
+Link para LinkedIn
+
+Cadastro mínimo de teacher e Student

@@ -3,10 +3,10 @@ using System.Linq;
 using BooksProject.Models;
 using BooksProject.Models.Context;
 using BooksProject.Models.Pagination;
-using BooksProject.Repository.Interface;
+using BooksProject.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
 
-namespace BooksProject.Repository
+namespace BooksProject.Repositories
 {
     public class BookRepository : IRepository<Book> 
     {
@@ -23,25 +23,23 @@ namespace BooksProject.Repository
                                     .Include(b => b.Gender)
                                     .Include(b => b.Identifier)
                                     .Include(b => b.AuthorBooks)
+                                    .OrderBy(b => b.Id)
                                     .Select(b => new Book(){
                                         Id = b.Id,
                                         Name = b.Name,
                                         Price = b.Price,
                                         PubDate = b.PubDate,
                                         EditorId = b.EditorId,
-                                        Editor = b.Editor,
                                         GenderId = b.GenderId,
-                                        Gender = b.Gender,
                                         IdentifierId = b.IdentifierId,
+                                        Editor = b.Editor,
+                                        Gender = b.Gender,
                                         Identifier = b.Identifier,
                                         AuthorBooks = b.AuthorBooks.Select(ab => new AuthorBook{
                                             Author = ab.Author,
-                                            AuthorId = ab.AuthorId,
-                                            Book = ab.Book,
-                                            BookId = ab.BookId
+                                            AuthorId = ab.AuthorId
                                         }).ToList()
-                                    })
-                                    .OrderBy(b => b.Id),
+                                    }),
                                     paginationParameters.PageNumber,
                                     paginationParameters.PageSize);
 
@@ -50,25 +48,7 @@ namespace BooksProject.Repository
                 .Include(b => b.Editor)
                 .Include(b => b.Gender)
                 .Include(b => b.Identifier)
-                .Include(b => b.AuthorBooks)
-                .Select(b => new Book(){
-                    Id = b.Id,
-                    Name = b.Name,
-                    Price = b.Price,
-                    PubDate = b.PubDate,
-                    EditorId = b.EditorId,
-                    Editor = b.Editor,
-                    GenderId = b.GenderId,
-                    Gender = b.Gender,
-                    IdentifierId = b.IdentifierId,
-                    Identifier = b.Identifier,
-                    AuthorBooks = b.AuthorBooks.Select(ab => new AuthorBook{
-                        Author = ab.Author,
-                        AuthorId = ab.AuthorId,
-                        Book = ab.Book,
-                        BookId = ab.BookId
-                    }).ToList()
-                })
+                .Include(b => b.AuthorBooks).ThenInclude(ab => ab.Author)
                 .Where(b => b.Id == id)
                 .SingleOrDefault();
 

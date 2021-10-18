@@ -1,7 +1,11 @@
+using BooksProject.Business;
+using BooksProject.Business.Interface;
 using BooksProject.Models;
 using BooksProject.Models.Context;
-using BooksProject.Repository;
-using BooksProject.Repository.Interface;
+using BooksProject.Models.InputModel;
+using BooksProject.Models.ViewModel;
+using BooksProject.Repositories;
+using BooksProject.Repositories.Interface;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -46,6 +50,13 @@ namespace BooksProject
             services.AddScoped<IRepository<Editor>, EditorRepository>();
             services.AddScoped<IRepository<Identifier>, IdentifierRepository>();
             services.AddScoped<IRepository<Author>, AuthorRepository>();
+            services.AddScoped<IAuthorBookRepository, AuthorBookRepository>();
+
+            services.AddScoped<IBusiness<EditorViewModel, EditorInputModel>, EditorBusiness>();
+            services.AddScoped<IBusiness<GenderViewModel, GenderInputModel>, GenderBusiness>();
+            services.AddScoped<IBusiness<IdentifierViewModel, IdentifierInputModel>, IdentifierBusiness>();
+            services.AddScoped<IBusiness<AuthorViewModel, AuthorInputModel>, AuthorBusiness>();
+            services.AddScoped<IBusiness<BookViewModel, BookInputModel>, BookBusiness>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

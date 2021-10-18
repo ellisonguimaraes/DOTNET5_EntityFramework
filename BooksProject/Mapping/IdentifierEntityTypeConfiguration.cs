@@ -2,7 +2,7 @@ using BooksProject.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace BooksProject.Map
+namespace BooksProject.Mapping
 {
     public class IdentifierEntityTypeConfiguration : IEntityTypeConfiguration<Identifier>
     {
@@ -16,11 +16,6 @@ namespace BooksProject.Map
             builder.Property(i => i.Id).HasColumnName("id").IsRequired();
             builder.Property(i => i.IdentifierType).HasColumnName("ident_type").HasPrecision(1).IsRequired();
             builder.Property(i => i.IdentifierNumber).HasColumnName("identifier").IsRequired();
-
-            // Relationship
-            builder.HasOne<Book>(i => i.Book)
-                .WithOne(b => b.Identifier)
-                .HasForeignKey<Book>(b => b.IdentifierId);
         }
     }
 }

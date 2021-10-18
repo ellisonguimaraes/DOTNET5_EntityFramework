@@ -2,11 +2,11 @@ using System;
 using System.Linq;
 using BooksProject.Models;
 using BooksProject.Models.Context;
-using BooksProject.Repository.Interface;
 using BooksProject.Models.Pagination;
+using BooksProject.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
 
-namespace BooksProject.Repository
+namespace BooksProject.Repositories
 {
     public class GenderRepository : IRepository<Gender>
     {
@@ -20,6 +20,9 @@ namespace BooksProject.Repository
         public PagedList<Gender> Get(PaginationParameters paginationParameters)
             => new PagedList<Gender>(_context.Generos
                                         .Include(g => g.Books)
+                                        .Include(g => g.Books).ThenInclude(b => b.Editor)
+                                        .Include(g => g.Books).ThenInclude(b => b.Identifier)
+                                        .Include(g => g.Books).ThenInclude(b => b.AuthorBooks).ThenInclude(ab => ab.Author)
                                         .OrderBy(g => g.Id),
                                         paginationParameters.PageNumber,
                                         paginationParameters.PageSize);
@@ -27,6 +30,9 @@ namespace BooksProject.Repository
         public Gender GetById(int id)
             => _context.Generos
                 .Include(g => g.Books)
+                .Include(g => g.Books).ThenInclude(b => b.Editor)
+                .Include(g => g.Books).ThenInclude(b => b.Identifier)
+                .Include(g => g.Books).ThenInclude(b => b.AuthorBooks).ThenInclude(ab => ab.Author)
                 .Where(g => g.Id == id)
                 .SingleOrDefault();
 

@@ -3,10 +3,10 @@ using System.Linq;
 using BooksProject.Models;
 using BooksProject.Models.Context;
 using BooksProject.Models.Pagination;
-using BooksProject.Repository.Interface;
+using BooksProject.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
 
-namespace BooksProject.Repository
+namespace BooksProject.Repositories
 {
     public class AuthorRepository : IRepository<Author>
     {
@@ -20,37 +20,37 @@ namespace BooksProject.Repository
         public PagedList<Author> Get(PaginationParameters paginationParameters)
             => new PagedList<Author>(_context.Autores
                                     .Include(a => a.AuthorBooks)
+                                    .OrderBy(a => a.Id)
                                     .Select(a => new Author(){
                                         Id = a.Id,
                                         Name = a.Name,
                                         LastName = a.LastName,
                                         BirthDate = a.BirthDate,
                                         AuthorBooks = a.AuthorBooks.Select(ab => new AuthorBook(){
-                                            Author = ab.Author,
-                                            AuthorId = ab.AuthorId,
-                                            Book = ab.Book,
-                                            BookId = ab.BookId
+                                            BookId = ab.BookId,
+                                            Book = new Book{
+                                                Id = ab.Book.Id,
+                                                Name = ab.Book.Name,
+                                                Price = ab.Book.Price,
+                                                PubDate = ab.Book.PubDate,
+                                                EditorId = ab.Book.EditorId,
+                                                Editor = ab.Book.Editor,
+                                                GenderId = ab.Book.GenderId,
+                                                Gender = ab.Book.Gender,
+                                                IdentifierId = ab.Book.IdentifierId,
+                                                Identifier = ab.Book.Identifier,
+                                            }
                                         }).ToList()
-                                    })
-                                    .OrderBy(a => a.Id),
+                                    }),
                                     paginationParameters.PageNumber,
                                     paginationParameters.PageSize);
 
         public Author GetById(int id)
             => _context.Autores
-                .Include(a => a.AuthorBooks)
-                .Select(a => new Author(){
-                    Id = a.Id,
-                    Name = a.Name,
-                    LastName = a.LastName,
-                    BirthDate = a.BirthDate,
-                    AuthorBooks = a.AuthorBooks.Select(ab => new AuthorBook(){
-                        Author = ab.Author,
-                        AuthorId = ab.AuthorId,
-                        Book = ab.Book,
-                        BookId = ab.BookId
-                    }).ToList()
-                })
+                .Include(a => a.AuthorBooks).ThenInclude(ab => ab.Book)
+                .Include(a => a.AuthorBooks).ThenInclude(ab => ab.Book.Editor)
+                .Include(a => a.AuthorBooks).ThenInclude(ab => ab.Book.Gender)
+                .Include(a => a.AuthorBooks).ThenInclude(ab => ab.Book.Identifier)
                 .Where(a => a.Id == id)
                 .SingleOrDefault();
 

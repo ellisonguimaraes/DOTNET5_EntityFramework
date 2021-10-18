@@ -1,4 +1,4 @@
-using BooksProject.Map;
+using BooksProject.Mapping;
 using Microsoft.EntityFrameworkCore;
 
 namespace BooksProject.Models.Context

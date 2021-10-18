@@ -11,8 +11,18 @@ namespace BooksProject.Models.Pagination
         public int PageSize { get; set; }
         public int TotalCount { get; set; }
         public bool HasPrevious => CurrentPage > 1;
-        public bool HasNext => CurrentPage < TotalPages;        
-              
+        public bool HasNext => CurrentPage < TotalPages;
+
+        public PagedList(IEnumerable<T> data, int currentPage, int totalPages, int pageSize, int totalCount)
+        {
+            CurrentPage = currentPage;
+            TotalPages = totalPages;
+            PageSize = pageSize;
+            TotalCount = totalCount;
+
+            this.AddRange(data);
+        }
+
         public PagedList(IQueryable<T> source, int pageNumber, int pageSize)
         {
             TotalCount = source.Count();
